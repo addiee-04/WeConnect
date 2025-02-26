@@ -1,63 +1,52 @@
-# undefsafe
+# node-touch
 
-Simple *function* for retrieving deep object properties without getting "Cannot read property 'X' of undefined"
+For all your node touching needs.
 
-Can also be used to safely set deep values.
+## Installing
 
-## Usage
-
-```js
-var object = {
-  a: {
-    b: {
-      c: 1,
-      d: [1,2,3],
-      e: 'remy'
-    }
-  }
-};
-
-console.log(undefsafe(object, 'a.b.e')); // "remy"
-console.log(undefsafe(object, 'a.b.not.found')); // undefined
+```bash
+npm install touch
 ```
 
-Demo: [https://jsbin.com/eroqame/3/edit?js,console](https://jsbin.com/eroqame/3/edit?js,console)
+## CLI Usage:
 
-## Setting
+See `man touch`
 
-```js
-var object = {
-  a: {
-    b: [1,2,3]
-  }
-};
+This package exports a binary called `nodetouch` that works mostly
+like the unix builtin `touch(1)`.
 
-// modified object
-var res = undefsafe(object, 'a.b.0', 10);
+## API Usage:
 
-console.log(object); // { a: { b: [10, 2, 3] } }
-console.log(res); // 1 - previous value
+```javascript
+var touch = require("touch")
 ```
 
-## Star rules in paths
+Gives you the following functions:
 
-As of 1.2.0, `undefsafe` supports a `*` in the path if you want to search all of the properties (or array elements) for a particular element.
+* `touch(filename, options, cb)`
+* `touch.sync(filename, options)`
+* `touch.ftouch(fd, options, cb)`
+* `touch.ftouchSync(fd, options)`
 
-The function will only return a single result, either the 3rd argument validation value, or the first positive match. For example, the following github data:
+All the `options` objects are optional.
 
-```js
-const githubData = {
-        commits: [{
-          modified: [
-            "one",
-            "two"
-          ]
-        }, /* ... */ ]
-      };
+All the async functions return a Promise.  If a callback function is
+provided, then it's attached to the Promise.
 
-// first modified file found in the first commit
-console.log(undefsafe(githubData, 'commits.*.modified.0'));
+## Options
 
-// returns `two` or undefined if not found
-console.log(undefsafe(githubData, 'commits.*.modified.*', 'two'));
-```
+* `force` like `touch -f` Boolean
+* `time` like `touch -t <date>` Can be a Date object, or any parseable
+  Date string, or epoch ms number.
+* `atime` like `touch -a` Can be either a Boolean, or a Date.
+* `mtime` like `touch -m` Can be either a Boolean, or a Date.
+* `ref` like `touch -r <file>` Must be path to a file.
+* `nocreate` like `touch -c` Boolean
+
+If neither `atime` nor `mtime` are set, then both values are set.  If
+one of them is set, then the other is not.
+
+## cli
+
+This package creates a `nodetouch` command line executable that works
+very much like the unix builtin `touch(1)`

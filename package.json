@@ -1,34 +1,25 @@
 {
-  "name": "undefsafe",
-  "description": "Undefined safe way of extracting object properties",
-  "main": "lib/undefsafe.js",
-  "tonicExampleFilename": "example.js",
-  "directories": {
-    "test": "test"
+  "author": "Isaac Z. Schlueter <i@izs.me> (http://blog.izs.me/)",
+  "name": "touch",
+  "description": "like touch(1) in node",
+  "version": "3.1.1",
+  "repository": "git://github.com/isaacs/node-touch.git",
+  "bin": {
+    "nodetouch": "./bin/nodetouch.js"
   },
+  "license": "ISC",
   "scripts": {
-    "test": "tap test/**/*.test.js -R spec",
-    "cover": "tap test/*.test.js --cov --coverage-report=lcov",
-    "semantic-release": "semantic-release"
+    "test": "tap test/*.js --100 -J",
+    "preversion": "npm test",
+    "postversion": "npm publish",
+    "postpublish": "git push origin --all; git push origin --tags"
   },
-  "prettier": {
-    "trailingComma": "none",
-    "singleQuote": true
-  },
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/remy/undefsafe.git"
-  },
-  "keywords": [
-    "undefined"
-  ],
-  "author": "Remy Sharp",
-  "license": "MIT",
   "devDependencies": {
-    "semantic-release": "^18.0.0",
-    "tap": "^5.7.1",
-    "tap-only": "0.0.5"
+    "mutate-fs": "^1.1.0",
+    "tap": "^10.7.0"
   },
-  "dependencies": {},
-  "version": "2.0.5"
+  "files": [
+    "index.js",
+    "bin/nodetouch.js"
+  ]
 }

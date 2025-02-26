@@ -1,149 +1,224 @@
-/*!
- * vary
- * Copyright(c) 2014-2017 Douglas Christopher Wilson
- * MIT Licensed
- */
-
 'use strict'
 
-/**
- * Module exports.
- */
+const EE = require('events').EventEmitter
+const cons = require('constants')
+const fs = require('fs')
 
-module.exports = vary
-module.exports.append = append
+module.exports = (f, options, cb) => {
+  if (typeof options === 'function')
+    cb = options, options = {}
 
-/**
- * RegExp to match field-name in RFC 7230 sec 3.2
- *
- * field-name    = token
- * token         = 1*tchar
- * tchar         = "!" / "#" / "$" / "%" / "&" / "'" / "*"
- *               / "+" / "-" / "." / "^" / "_" / "`" / "|" / "~"
- *               / DIGIT / ALPHA
- *               ; any VCHAR, except delimiters
- */
+  const p = new Promise((res, rej) => {
+    new Touch(validOpts(options, f, null))
+      .on('done', res).on('error', rej)
+  })
 
-var FIELD_NAME_REGEXP = /^[!#$%&'*+\-.^_`|~0-9A-Za-z]+$/
-
-/**
- * Append a field to a vary header.
- *
- * @param {String} header
- * @param {String|Array} field
- * @return {String}
- * @public
- */
-
-function append (header, field) {
-  if (typeof header !== 'string') {
-    throw new TypeError('header argument is required')
-  }
-
-  if (!field) {
-    throw new TypeError('field argument is required')
-  }
-
-  // get fields array
-  var fields = !Array.isArray(field)
-    ? parse(String(field))
-    : field
-
-  // assert on invalid field names
-  for (var j = 0; j < fields.length; j++) {
-    if (!FIELD_NAME_REGEXP.test(fields[j])) {
-      throw new TypeError('field argument contains an invalid header name')
-    }
-  }
-
-  // existing, unspecified vary
-  if (header === '*') {
-    return header
-  }
-
-  // enumerate current values
-  var val = header
-  var vals = parse(header.toLowerCase())
-
-  // unspecified vary
-  if (fields.indexOf('*') !== -1 || vals.indexOf('*') !== -1) {
-    return '*'
-  }
-
-  for (var i = 0; i < fields.length; i++) {
-    var fld = fields[i].toLowerCase()
-
-    // append value (case-preserving)
-    if (vals.indexOf(fld) === -1) {
-      vals.push(fld)
-      val = val
-        ? val + ', ' + fields[i]
-        : fields[i]
-    }
-  }
-
-  return val
+  return cb ? p.then(res => cb(null, res), cb) : p
 }
 
-/**
- * Parse a vary header into an array.
- *
- * @param {String} header
- * @return {Array}
- * @private
- */
+module.exports.sync = module.exports.touchSync = (f, options) =>
+  (new TouchSync(validOpts(options, f, null)), undefined)
 
-function parse (header) {
-  var end = 0
-  var list = []
-  var start = 0
+module.exports.ftouch = (fd, options, cb) => {
+  if (typeof options === 'function')
+    cb = options, options = {}
 
-  // gather tokens
-  for (var i = 0, len = header.length; i < len; i++) {
-    switch (header.charCodeAt(i)) {
-      case 0x20: /*   */
-        if (start === end) {
-          start = end = i + 1
-        }
-        break
-      case 0x2c: /* , */
-        list.push(header.substring(start, end))
-        start = end = i + 1
-        break
-      default:
-        end = i + 1
-        break
+  const p = new Promise((res, rej) => {
+    new Touch(validOpts(options, null, fd))
+      .on('done', res).on('error', rej)
+  })
+
+  return cb ? p.then(res => cb(null, res), cb) : p
+}
+
+module.exports.ftouchSync = (fd, opt) =>
+  (new TouchSync(validOpts(opt, null, fd)), undefined)
+
+const validOpts = (options, path, fd) => {
+  options = Object.create(options || {})
+  options.fd = fd
+  options.path = path
+
+  // {mtime: true}, {ctime: true}
+  // If set to something else, then treat as epoch ms value
+  const now = new Date(options.time || Date.now()).getTime() / 1000
+  if (!options.atime && !options.mtime)
+    options.atime = options.mtime = now
+  else {
+    if (true === options.atime)
+      options.atime = now
+
+    if (true === options.mtime)
+      options.mtime = now
+  }
+
+  let oflags = 0
+  if (!options.force)
+    oflags = oflags | cons.O_RDWR
+
+  if (!options.nocreate)
+    oflags = oflags | cons.O_CREAT
+
+  options.oflags = oflags
+  return options
+}
+
+class Touch extends EE {
+  constructor (options) {
+    super(options)
+    this.fd = options.fd
+    this.path = options.path
+    this.atime = options.atime
+    this.mtime = options.mtime
+    this.ref = options.ref
+    this.nocreate = !!options.nocreate
+    this.force = !!options.force
+    this.closeAfter = options.closeAfter
+    this.oflags = options.oflags
+    this.options = options
+
+    if (typeof this.fd !== 'number') {
+      this.closeAfter = true
+      this.open()
+    } else
+      this.onopen(null, this.fd)
+  }
+
+  emit (ev, data) {
+    // we only emit when either done or erroring
+    // in both cases, need to close
+    this.close()
+    return super.emit(ev, data)
+  }
+
+  close () {
+    if (typeof this.fd === 'number' && this.closeAfter)
+      fs.close(this.fd, () => {})
+  }
+
+  open () {
+    fs.open(this.path, this.oflags, (er, fd) => this.onopen(er, fd))
+  }
+
+  onopen (er, fd) {
+    if (er) {
+      if (er.code === 'EISDIR')
+        this.onopen(null, null)
+      else if (er.code === 'ENOENT' && this.nocreate)
+        this.emit('done')
+      else
+        this.emit('error', er)
+    } else {
+      this.fd = fd
+      if (this.ref)
+        this.statref()
+      else if (!this.atime || !this.mtime)
+        this.fstat()
+      else
+        this.futimes()
     }
   }
 
-  // final token
-  list.push(header.substring(start, end))
-
-  return list
-}
-
-/**
- * Mark that a request is varied on a header field.
- *
- * @param {Object} res
- * @param {String|Array} field
- * @public
- */
-
-function vary (res, field) {
-  if (!res || !res.getHeader || !res.setHeader) {
-    // quack quack
-    throw new TypeError('res argument is required')
+  statref () {
+    fs.stat(this.ref, (er, st) => {
+      if (er)
+        this.emit('error', er)
+      else
+        this.onstatref(st)
+    })
   }
 
-  // get existing header
-  var val = res.getHeader('Vary') || ''
-  var header = Array.isArray(val)
-    ? val.join(', ')
-    : String(val)
+  onstatref (st) {
+    this.atime = this.atime && st.atime.getTime()/1000
+    this.mtime = this.mtime && st.mtime.getTime()/1000
+    if (!this.atime || !this.mtime)
+      this.fstat()
+    else
+      this.futimes()
+  }
 
-  // set new header
-  if ((val = append(header, field))) {
-    res.setHeader('Vary', val)
+  fstat () {
+    const stat = this.fd ? 'fstat' : 'stat'
+    const target = this.fd || this.path
+    fs[stat](target, (er, st) => {
+      if (er)
+        this.emit('error', er)
+      else
+        this.onfstat(st)
+    })
+  }
+
+  onfstat (st) {
+    if (typeof this.atime !== 'number')
+      this.atime = st.atime.getTime()/1000
+
+    if (typeof this.mtime !== 'number')
+      this.mtime = st.mtime.getTime()/1000
+
+    this.futimes()
+  }
+
+  futimes () {
+    const utimes = this.fd ? 'futimes' : 'utimes'
+    const target = this.fd || this.path
+    fs[utimes](target, ''+this.atime, ''+this.mtime, er => {
+      if (er)
+        this.emit('error', er)
+      else
+        this.emit('done')
+    })
+  }
+}
+
+class TouchSync extends Touch {
+  open () {
+    try {
+      this.onopen(null, fs.openSync(this.path, this.oflags))
+    } catch (er) {
+      this.onopen(er)
+    }
+  }
+
+  statref () {
+    let threw = true
+    try {
+      this.onstatref(fs.statSync(this.ref))
+      threw = false
+    } finally {
+      if (threw)
+        this.close()
+    }
+  }
+
+  fstat () {
+    let threw = true
+    const stat = this.fd ? 'fstatSync' : 'statSync'
+    const target = this.fd || this.path
+    try {
+      this.onfstat(fs[stat](target))
+      threw = false
+    } finally {
+      if (threw)
+        this.close()
+    }
+  }
+
+  futimes () {
+    let threw = true
+    const utimes = this.fd ? 'futimesSync' : 'utimesSync'
+    const target = this.fd || this.path
+    try {
+      fs[utimes](target, this.atime, this.mtime)
+      threw = false
+    } finally {
+      if (threw)
+        this.close()
+    }
+    this.emit('done')
+  }
+
+  close () {
+    if (typeof this.fd === 'number' && this.closeAfter)
+      try { fs.closeSync(this.fd) } catch (er) {}
   }
 }
