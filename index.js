@@ -1,224 +1,321 @@
-'use strict'
-
-const EE = require('events').EventEmitter
-const cons = require('constants')
-const fs = require('fs')
-
-module.exports = (f, options, cb) => {
-  if (typeof options === 'function')
-    cb = options, options = {}
-
-  const p = new Promise((res, rej) => {
-    new Touch(validOpts(options, f, null))
-      .on('done', res).on('error', rej)
-  })
-
-  return cb ? p.then(res => cb(null, res), cb) : p
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.Decoder = exports.Encoder = exports.PacketType = exports.protocol = void 0;
+const component_emitter_1 = require("@socket.io/component-emitter");
+const binary_js_1 = require("./binary.js");
+const is_binary_js_1 = require("./is-binary.js");
+const debug_1 = require("debug"); // debug()
+const debug = (0, debug_1.default)("socket.io-parser"); // debug()
+/**
+ * These strings must not be used as event names, as they have a special meaning.
+ */
+const RESERVED_EVENTS = [
+    "connect",
+    "connect_error",
+    "disconnect",
+    "disconnecting",
+    "newListener",
+    "removeListener", // used by the Node.js EventEmitter
+];
+/**
+ * Protocol version.
+ *
+ * @public
+ */
+exports.protocol = 5;
+var PacketType;
+(function (PacketType) {
+    PacketType[PacketType["CONNECT"] = 0] = "CONNECT";
+    PacketType[PacketType["DISCONNECT"] = 1] = "DISCONNECT";
+    PacketType[PacketType["EVENT"] = 2] = "EVENT";
+    PacketType[PacketType["ACK"] = 3] = "ACK";
+    PacketType[PacketType["CONNECT_ERROR"] = 4] = "CONNECT_ERROR";
+    PacketType[PacketType["BINARY_EVENT"] = 5] = "BINARY_EVENT";
+    PacketType[PacketType["BINARY_ACK"] = 6] = "BINARY_ACK";
+})(PacketType = exports.PacketType || (exports.PacketType = {}));
+/**
+ * A socket.io Encoder instance
+ */
+class Encoder {
+    /**
+     * Encoder constructor
+     *
+     * @param {function} replacer - custom replacer to pass down to JSON.parse
+     */
+    constructor(replacer) {
+        this.replacer = replacer;
+    }
+    /**
+     * Encode a packet as a single string if non-binary, or as a
+     * buffer sequence, depending on packet type.
+     *
+     * @param {Object} obj - packet object
+     */
+    encode(obj) {
+        debug("encoding packet %j", obj);
+        if (obj.type === PacketType.EVENT || obj.type === PacketType.ACK) {
+            if ((0, is_binary_js_1.hasBinary)(obj)) {
+                return this.encodeAsBinary({
+                    type: obj.type === PacketType.EVENT
+                        ? PacketType.BINARY_EVENT
+                        : PacketType.BINARY_ACK,
+                    nsp: obj.nsp,
+                    data: obj.data,
+                    id: obj.id,
+                });
+            }
+        }
+        return [this.encodeAsString(obj)];
+    }
+    /**
+     * Encode packet as string.
+     */
+    encodeAsString(obj) {
+        // first is type
+        let str = "" + obj.type;
+        // attachments if we have them
+        if (obj.type === PacketType.BINARY_EVENT ||
+            obj.type === PacketType.BINARY_ACK) {
+            str += obj.attachments + "-";
+        }
+        // if we have a namespace other than `/`
+        // we append it followed by a comma `,`
+        if (obj.nsp && "/" !== obj.nsp) {
+            str += obj.nsp + ",";
+        }
+        // immediately followed by the id
+        if (null != obj.id) {
+            str += obj.id;
+        }
+        // json data
+        if (null != obj.data) {
+            str += JSON.stringify(obj.data, this.replacer);
+        }
+        debug("encoded %j as %s", obj, str);
+        return str;
+    }
+    /**
+     * Encode packet as 'buffer sequence' by removing blobs, and
+     * deconstructing packet into object with placeholders and
+     * a list of buffers.
+     */
+    encodeAsBinary(obj) {
+        const deconstruction = (0, binary_js_1.deconstructPacket)(obj);
+        const pack = this.encodeAsString(deconstruction.packet);
+        const buffers = deconstruction.buffers;
+        buffers.unshift(pack); // add packet info to beginning of data list
+        return buffers; // write all the buffers
+    }
 }
-
-module.exports.sync = module.exports.touchSync = (f, options) =>
-  (new TouchSync(validOpts(options, f, null)), undefined)
-
-module.exports.ftouch = (fd, options, cb) => {
-  if (typeof options === 'function')
-    cb = options, options = {}
-
-  const p = new Promise((res, rej) => {
-    new Touch(validOpts(options, null, fd))
-      .on('done', res).on('error', rej)
-  })
-
-  return cb ? p.then(res => cb(null, res), cb) : p
+exports.Encoder = Encoder;
+// see https://stackoverflow.com/questions/8511281/check-if-a-value-is-an-object-in-javascript
+function isObject(value) {
+    return Object.prototype.toString.call(value) === "[object Object]";
 }
-
-module.exports.ftouchSync = (fd, opt) =>
-  (new TouchSync(validOpts(opt, null, fd)), undefined)
-
-const validOpts = (options, path, fd) => {
-  options = Object.create(options || {})
-  options.fd = fd
-  options.path = path
-
-  // {mtime: true}, {ctime: true}
-  // If set to something else, then treat as epoch ms value
-  const now = new Date(options.time || Date.now()).getTime() / 1000
-  if (!options.atime && !options.mtime)
-    options.atime = options.mtime = now
-  else {
-    if (true === options.atime)
-      options.atime = now
-
-    if (true === options.mtime)
-      options.mtime = now
-  }
-
-  let oflags = 0
-  if (!options.force)
-    oflags = oflags | cons.O_RDWR
-
-  if (!options.nocreate)
-    oflags = oflags | cons.O_CREAT
-
-  options.oflags = oflags
-  return options
+/**
+ * A socket.io Decoder instance
+ *
+ * @return {Object} decoder
+ */
+class Decoder extends component_emitter_1.Emitter {
+    /**
+     * Decoder constructor
+     *
+     * @param {function} reviver - custom reviver to pass down to JSON.stringify
+     */
+    constructor(reviver) {
+        super();
+        this.reviver = reviver;
+    }
+    /**
+     * Decodes an encoded packet string into packet JSON.
+     *
+     * @param {String} obj - encoded packet
+     */
+    add(obj) {
+        let packet;
+        if (typeof obj === "string") {
+            if (this.reconstructor) {
+                throw new Error("got plaintext data when reconstructing a packet");
+            }
+            packet = this.decodeString(obj);
+            const isBinaryEvent = packet.type === PacketType.BINARY_EVENT;
+            if (isBinaryEvent || packet.type === PacketType.BINARY_ACK) {
+                packet.type = isBinaryEvent ? PacketType.EVENT : PacketType.ACK;
+                // binary packet's json
+                this.reconstructor = new BinaryReconstructor(packet);
+                // no attachments, labeled binary but no binary data to follow
+                if (packet.attachments === 0) {
+                    super.emitReserved("decoded", packet);
+                }
+            }
+            else {
+                // non-binary full packet
+                super.emitReserved("decoded", packet);
+            }
+        }
+        else if ((0, is_binary_js_1.isBinary)(obj) || obj.base64) {
+            // raw binary data
+            if (!this.reconstructor) {
+                throw new Error("got binary data when not reconstructing a packet");
+            }
+            else {
+                packet = this.reconstructor.takeBinaryData(obj);
+                if (packet) {
+                    // received final buffer
+                    this.reconstructor = null;
+                    super.emitReserved("decoded", packet);
+                }
+            }
+        }
+        else {
+            throw new Error("Unknown type: " + obj);
+        }
+    }
+    /**
+     * Decode a packet String (JSON data)
+     *
+     * @param {String} str
+     * @return {Object} packet
+     */
+    decodeString(str) {
+        let i = 0;
+        // look up type
+        const p = {
+            type: Number(str.charAt(0)),
+        };
+        if (PacketType[p.type] === undefined) {
+            throw new Error("unknown packet type " + p.type);
+        }
+        // look up attachments if type binary
+        if (p.type === PacketType.BINARY_EVENT ||
+            p.type === PacketType.BINARY_ACK) {
+            const start = i + 1;
+            while (str.charAt(++i) !== "-" && i != str.length) { }
+            const buf = str.substring(start, i);
+            if (buf != Number(buf) || str.charAt(i) !== "-") {
+                throw new Error("Illegal attachments");
+            }
+            p.attachments = Number(buf);
+        }
+        // look up namespace (if any)
+        if ("/" === str.charAt(i + 1)) {
+            const start = i + 1;
+            while (++i) {
+                const c = str.charAt(i);
+                if ("," === c)
+                    break;
+                if (i === str.length)
+                    break;
+            }
+            p.nsp = str.substring(start, i);
+        }
+        else {
+            p.nsp = "/";
+        }
+        // look up id
+        const next = str.charAt(i + 1);
+        if ("" !== next && Number(next) == next) {
+            const start = i + 1;
+            while (++i) {
+                const c = str.charAt(i);
+                if (null == c || Number(c) != c) {
+                    --i;
+                    break;
+                }
+                if (i === str.length)
+                    break;
+            }
+            p.id = Number(str.substring(start, i + 1));
+        }
+        // look up json data
+        if (str.charAt(++i)) {
+            const payload = this.tryParse(str.substr(i));
+            if (Decoder.isPayloadValid(p.type, payload)) {
+                p.data = payload;
+            }
+            else {
+                throw new Error("invalid payload");
+            }
+        }
+        debug("decoded %s as %j", str, p);
+        return p;
+    }
+    tryParse(str) {
+        try {
+            return JSON.parse(str, this.reviver);
+        }
+        catch (e) {
+            return false;
+        }
+    }
+    static isPayloadValid(type, payload) {
+        switch (type) {
+            case PacketType.CONNECT:
+                return isObject(payload);
+            case PacketType.DISCONNECT:
+                return payload === undefined;
+            case PacketType.CONNECT_ERROR:
+                return typeof payload === "string" || isObject(payload);
+            case PacketType.EVENT:
+            case PacketType.BINARY_EVENT:
+                return (Array.isArray(payload) &&
+                    (typeof payload[0] === "number" ||
+                        (typeof payload[0] === "string" &&
+                            RESERVED_EVENTS.indexOf(payload[0]) === -1)));
+            case PacketType.ACK:
+            case PacketType.BINARY_ACK:
+                return Array.isArray(payload);
+        }
+    }
+    /**
+     * Deallocates a parser's resources
+     */
+    destroy() {
+        if (this.reconstructor) {
+            this.reconstructor.finishedReconstruction();
+            this.reconstructor = null;
+        }
+    }
 }
-
-class Touch extends EE {
-  constructor (options) {
-    super(options)
-    this.fd = options.fd
-    this.path = options.path
-    this.atime = options.atime
-    this.mtime = options.mtime
-    this.ref = options.ref
-    this.nocreate = !!options.nocreate
-    this.force = !!options.force
-    this.closeAfter = options.closeAfter
-    this.oflags = options.oflags
-    this.options = options
-
-    if (typeof this.fd !== 'number') {
-      this.closeAfter = true
-      this.open()
-    } else
-      this.onopen(null, this.fd)
-  }
-
-  emit (ev, data) {
-    // we only emit when either done or erroring
-    // in both cases, need to close
-    this.close()
-    return super.emit(ev, data)
-  }
-
-  close () {
-    if (typeof this.fd === 'number' && this.closeAfter)
-      fs.close(this.fd, () => {})
-  }
-
-  open () {
-    fs.open(this.path, this.oflags, (er, fd) => this.onopen(er, fd))
-  }
-
-  onopen (er, fd) {
-    if (er) {
-      if (er.code === 'EISDIR')
-        this.onopen(null, null)
-      else if (er.code === 'ENOENT' && this.nocreate)
-        this.emit('done')
-      else
-        this.emit('error', er)
-    } else {
-      this.fd = fd
-      if (this.ref)
-        this.statref()
-      else if (!this.atime || !this.mtime)
-        this.fstat()
-      else
-        this.futimes()
+exports.Decoder = Decoder;
+/**
+ * A manager of a binary event's 'buffer sequence'. Should
+ * be constructed whenever a packet of type BINARY_EVENT is
+ * decoded.
+ *
+ * @param {Object} packet
+ * @return {BinaryReconstructor} initialized reconstructor
+ */
+class BinaryReconstructor {
+    constructor(packet) {
+        this.packet = packet;
+        this.buffers = [];
+        this.reconPack = packet;
     }
-  }
-
-  statref () {
-    fs.stat(this.ref, (er, st) => {
-      if (er)
-        this.emit('error', er)
-      else
-        this.onstatref(st)
-    })
-  }
-
-  onstatref (st) {
-    this.atime = this.atime && st.atime.getTime()/1000
-    this.mtime = this.mtime && st.mtime.getTime()/1000
-    if (!this.atime || !this.mtime)
-      this.fstat()
-    else
-      this.futimes()
-  }
-
-  fstat () {
-    const stat = this.fd ? 'fstat' : 'stat'
-    const target = this.fd || this.path
-    fs[stat](target, (er, st) => {
-      if (er)
-        this.emit('error', er)
-      else
-        this.onfstat(st)
-    })
-  }
-
-  onfstat (st) {
-    if (typeof this.atime !== 'number')
-      this.atime = st.atime.getTime()/1000
-
-    if (typeof this.mtime !== 'number')
-      this.mtime = st.mtime.getTime()/1000
-
-    this.futimes()
-  }
-
-  futimes () {
-    const utimes = this.fd ? 'futimes' : 'utimes'
-    const target = this.fd || this.path
-    fs[utimes](target, ''+this.atime, ''+this.mtime, er => {
-      if (er)
-        this.emit('error', er)
-      else
-        this.emit('done')
-    })
-  }
-}
-
-class TouchSync extends Touch {
-  open () {
-    try {
-      this.onopen(null, fs.openSync(this.path, this.oflags))
-    } catch (er) {
-      this.onopen(er)
+    /**
+     * Method to be called when binary data received from connection
+     * after a BINARY_EVENT packet.
+     *
+     * @param {Buffer | ArrayBuffer} binData - the raw binary data received
+     * @return {null | Object} returns null if more binary data is expected or
+     *   a reconstructed packet object if all buffers have been received.
+     */
+    takeBinaryData(binData) {
+        this.buffers.push(binData);
+        if (this.buffers.length === this.reconPack.attachments) {
+            // done with buffer list
+            const packet = (0, binary_js_1.reconstructPacket)(this.reconPack, this.buffers);
+            this.finishedReconstruction();
+            return packet;
+        }
+        return null;
     }
-  }
-
-  statref () {
-    let threw = true
-    try {
-      this.onstatref(fs.statSync(this.ref))
-      threw = false
-    } finally {
-      if (threw)
-        this.close()
+    /**
+     * Cleans up binary packet reconstruction variables.
+     */
+    finishedReconstruction() {
+        this.reconPack = null;
+        this.buffers = [];
     }
-  }
-
-  fstat () {
-    let threw = true
-    const stat = this.fd ? 'fstatSync' : 'statSync'
-    const target = this.fd || this.path
-    try {
-      this.onfstat(fs[stat](target))
-      threw = false
-    } finally {
-      if (threw)
-        this.close()
-    }
-  }
-
-  futimes () {
-    let threw = true
-    const utimes = this.fd ? 'futimesSync' : 'utimesSync'
-    const target = this.fd || this.path
-    try {
-      fs[utimes](target, this.atime, this.mtime)
-      threw = false
-    } finally {
-      if (threw)
-        this.close()
-    }
-    this.emit('done')
-  }
-
-  close () {
-    if (typeof this.fd === 'number' && this.closeAfter)
-      try { fs.closeSync(this.fd) } catch (er) {}
-  }
 }

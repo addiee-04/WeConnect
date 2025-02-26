@@ -1,63 +1,90 @@
-import Dispatcher from'./dispatcher'
-import { setGlobalDispatcher, getGlobalDispatcher } from './global-dispatcher'
-import { setGlobalOrigin, getGlobalOrigin } from './global-origin'
-import Pool from'./pool'
-import { RedirectHandler, DecoratorHandler } from './handlers'
-
-import BalancedPool from './balanced-pool'
-import Client from'./client'
-import buildConnector from'./connector'
-import errors from'./errors'
-import Agent from'./agent'
-import MockClient from'./mock-client'
-import MockPool from'./mock-pool'
-import MockAgent from'./mock-agent'
-import mockErrors from'./mock-errors'
-import ProxyAgent from'./proxy-agent'
-import { request, pipeline, stream, connect, upgrade } from './api'
-
-export * from './cookies'
-export * from './fetch'
-export * from './file'
-export * from './filereader'
-export * from './formdata'
-export * from './diagnostics-channel'
-export * from './websocket'
-export * from './content-type'
-export * from './cache'
-export { Interceptable } from './mock-interceptor'
-
-export { Dispatcher, BalancedPool, Pool, Client, buildConnector, errors, Agent, request, stream, pipeline, connect, upgrade, setGlobalDispatcher, getGlobalDispatcher, setGlobalOrigin, getGlobalOrigin, MockClient, MockPool, MockAgent, mockErrors, ProxyAgent, RedirectHandler, DecoratorHandler }
-export default Undici
-
-declare namespace Undici {
-  var Dispatcher: typeof import('./dispatcher').default
-  var Pool: typeof import('./pool').default;
-  var RedirectHandler: typeof import ('./handlers').RedirectHandler
-  var DecoratorHandler: typeof import ('./handlers').DecoratorHandler
-  var createRedirectInterceptor: typeof import ('./interceptors').createRedirectInterceptor
-  var BalancedPool: typeof import('./balanced-pool').default;
-  var Client: typeof import('./client').default;
-  var buildConnector: typeof import('./connector').default;
-  var errors: typeof import('./errors').default;
-  var Agent: typeof import('./agent').default;
-  var setGlobalDispatcher: typeof import('./global-dispatcher').setGlobalDispatcher;
-  var getGlobalDispatcher: typeof import('./global-dispatcher').getGlobalDispatcher;
-  var request: typeof import('./api').request;
-  var stream: typeof import('./api').stream;
-  var pipeline: typeof import('./api').pipeline;
-  var connect: typeof import('./api').connect;
-  var upgrade: typeof import('./api').upgrade;
-  var MockClient: typeof import('./mock-client').default;
-  var MockPool: typeof import('./mock-pool').default;
-  var MockAgent: typeof import('./mock-agent').default;
-  var mockErrors: typeof import('./mock-errors').default;
-  var fetch: typeof import('./fetch').fetch;
-  var Headers: typeof import('./fetch').Headers;
-  var Response: typeof import('./fetch').Response;
-  var Request: typeof import('./fetch').Request;
-  var FormData: typeof import('./formdata').FormData;
-  var File: typeof import('./file').File;
-  var FileReader: typeof import('./filereader').FileReader;
-  var caches: typeof import('./cache').caches;
+import { Emitter } from "@socket.io/component-emitter";
+/**
+ * Protocol version.
+ *
+ * @public
+ */
+export declare const protocol: number;
+export declare enum PacketType {
+    CONNECT = 0,
+    DISCONNECT = 1,
+    EVENT = 2,
+    ACK = 3,
+    CONNECT_ERROR = 4,
+    BINARY_EVENT = 5,
+    BINARY_ACK = 6
 }
+export interface Packet {
+    type: PacketType;
+    nsp: string;
+    data?: any;
+    id?: number;
+    attachments?: number;
+}
+/**
+ * A socket.io Encoder instance
+ */
+export declare class Encoder {
+    private replacer?;
+    /**
+     * Encoder constructor
+     *
+     * @param {function} replacer - custom replacer to pass down to JSON.parse
+     */
+    constructor(replacer?: (this: any, key: string, value: any) => any);
+    /**
+     * Encode a packet as a single string if non-binary, or as a
+     * buffer sequence, depending on packet type.
+     *
+     * @param {Object} obj - packet object
+     */
+    encode(obj: Packet): any[];
+    /**
+     * Encode packet as string.
+     */
+    private encodeAsString;
+    /**
+     * Encode packet as 'buffer sequence' by removing blobs, and
+     * deconstructing packet into object with placeholders and
+     * a list of buffers.
+     */
+    private encodeAsBinary;
+}
+interface DecoderReservedEvents {
+    decoded: (packet: Packet) => void;
+}
+/**
+ * A socket.io Decoder instance
+ *
+ * @return {Object} decoder
+ */
+export declare class Decoder extends Emitter<{}, {}, DecoderReservedEvents> {
+    private reviver?;
+    private reconstructor;
+    /**
+     * Decoder constructor
+     *
+     * @param {function} reviver - custom reviver to pass down to JSON.stringify
+     */
+    constructor(reviver?: (this: any, key: string, value: any) => any);
+    /**
+     * Decodes an encoded packet string into packet JSON.
+     *
+     * @param {String} obj - encoded packet
+     */
+    add(obj: any): void;
+    /**
+     * Decode a packet String (JSON data)
+     *
+     * @param {String} str
+     * @return {Object} packet
+     */
+    private decodeString;
+    private tryParse;
+    private static isPayloadValid;
+    /**
+     * Deallocates a parser's resources
+     */
+    destroy(): void;
+}
+export {};
