@@ -1,58 +1,217 @@
 {
-  "name": "socket.io-parser",
-  "version": "4.2.4",
-  "description": "socket.io protocol parser",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/socketio/socket.io-parser.git"
-  },
-  "files": [
-    "build/"
-  ],
-  "main": "./build/cjs/index.js",
-  "module": "./build/esm/index.js",
-  "types": "./build/esm/index.d.ts",
-  "exports": {
-    "import": {
-      "node": "./build/esm-debug/index.js",
-      "default": "./build/esm/index.js"
+    "name": "@types/node",
+    "version": "20.14.11",
+    "description": "TypeScript definitions for node",
+    "homepage": "https://github.com/DefinitelyTyped/DefinitelyTyped/tree/master/types/node",
+    "license": "MIT",
+    "contributors": [
+        {
+            "name": "Microsoft TypeScript",
+            "githubUsername": "Microsoft",
+            "url": "https://github.com/Microsoft"
+        },
+        {
+            "name": "Alberto Schiabel",
+            "githubUsername": "jkomyno",
+            "url": "https://github.com/jkomyno"
+        },
+        {
+            "name": "Alvis HT Tang",
+            "githubUsername": "alvis",
+            "url": "https://github.com/alvis"
+        },
+        {
+            "name": "Andrew Makarov",
+            "githubUsername": "r3nya",
+            "url": "https://github.com/r3nya"
+        },
+        {
+            "name": "Benjamin Toueg",
+            "githubUsername": "btoueg",
+            "url": "https://github.com/btoueg"
+        },
+        {
+            "name": "Chigozirim C.",
+            "githubUsername": "smac89",
+            "url": "https://github.com/smac89"
+        },
+        {
+            "name": "David Junger",
+            "githubUsername": "touffy",
+            "url": "https://github.com/touffy"
+        },
+        {
+            "name": "Deividas Bakanas",
+            "githubUsername": "DeividasBakanas",
+            "url": "https://github.com/DeividasBakanas"
+        },
+        {
+            "name": "Eugene Y. Q. Shen",
+            "githubUsername": "eyqs",
+            "url": "https://github.com/eyqs"
+        },
+        {
+            "name": "Hannes Magnusson",
+            "githubUsername": "Hannes-Magnusson-CK",
+            "url": "https://github.com/Hannes-Magnusson-CK"
+        },
+        {
+            "name": "Huw",
+            "githubUsername": "hoo29",
+            "url": "https://github.com/hoo29"
+        },
+        {
+            "name": "Kelvin Jin",
+            "githubUsername": "kjin",
+            "url": "https://github.com/kjin"
+        },
+        {
+            "name": "Klaus Meinhardt",
+            "githubUsername": "ajafff",
+            "url": "https://github.com/ajafff"
+        },
+        {
+            "name": "Lishude",
+            "githubUsername": "islishude",
+            "url": "https://github.com/islishude"
+        },
+        {
+            "name": "Mariusz Wiktorczyk",
+            "githubUsername": "mwiktorczyk",
+            "url": "https://github.com/mwiktorczyk"
+        },
+        {
+            "name": "Mohsen Azimi",
+            "githubUsername": "mohsen1",
+            "url": "https://github.com/mohsen1"
+        },
+        {
+            "name": "Nikita Galkin",
+            "githubUsername": "galkin",
+            "url": "https://github.com/galkin"
+        },
+        {
+            "name": "Parambir Singh",
+            "githubUsername": "parambirs",
+            "url": "https://github.com/parambirs"
+        },
+        {
+            "name": "Sebastian Silbermann",
+            "githubUsername": "eps1lon",
+            "url": "https://github.com/eps1lon"
+        },
+        {
+            "name": "Thomas den Hollander",
+            "githubUsername": "ThomasdenH",
+            "url": "https://github.com/ThomasdenH"
+        },
+        {
+            "name": "Wilco Bakker",
+            "githubUsername": "WilcoBakker",
+            "url": "https://github.com/WilcoBakker"
+        },
+        {
+            "name": "wwwy3y3",
+            "githubUsername": "wwwy3y3",
+            "url": "https://github.com/wwwy3y3"
+        },
+        {
+            "name": "Samuel Ainsworth",
+            "githubUsername": "samuela",
+            "url": "https://github.com/samuela"
+        },
+        {
+            "name": "Kyle Uehlein",
+            "githubUsername": "kuehlein",
+            "url": "https://github.com/kuehlein"
+        },
+        {
+            "name": "Thanik Bhongbhibhat",
+            "githubUsername": "bhongy",
+            "url": "https://github.com/bhongy"
+        },
+        {
+            "name": "Marcin Kopacz",
+            "githubUsername": "chyzwar",
+            "url": "https://github.com/chyzwar"
+        },
+        {
+            "name": "Trivikram Kamat",
+            "githubUsername": "trivikr",
+            "url": "https://github.com/trivikr"
+        },
+        {
+            "name": "Junxiao Shi",
+            "githubUsername": "yoursunny",
+            "url": "https://github.com/yoursunny"
+        },
+        {
+            "name": "Ilia Baryshnikov",
+            "githubUsername": "qwelias",
+            "url": "https://github.com/qwelias"
+        },
+        {
+            "name": "ExE Boss",
+            "githubUsername": "ExE-Boss",
+            "url": "https://github.com/ExE-Boss"
+        },
+        {
+            "name": "Piotr Błażejewicz",
+            "githubUsername": "peterblazejewicz",
+            "url": "https://github.com/peterblazejewicz"
+        },
+        {
+            "name": "Anna Henningsen",
+            "githubUsername": "addaleax",
+            "url": "https://github.com/addaleax"
+        },
+        {
+            "name": "Victor Perin",
+            "githubUsername": "victorperin",
+            "url": "https://github.com/victorperin"
+        },
+        {
+            "name": "Yongsheng Zhang",
+            "githubUsername": "ZYSzys",
+            "url": "https://github.com/ZYSzys"
+        },
+        {
+            "name": "NodeJS Contributors",
+            "githubUsername": "NodeJS",
+            "url": "https://github.com/NodeJS"
+        },
+        {
+            "name": "Linus Unnebäck",
+            "githubUsername": "LinusU",
+            "url": "https://github.com/LinusU"
+        },
+        {
+            "name": "wafuwafu13",
+            "githubUsername": "wafuwafu13",
+            "url": "https://github.com/wafuwafu13"
+        },
+        {
+            "name": "Matteo Collina",
+            "githubUsername": "mcollina",
+            "url": "https://github.com/mcollina"
+        },
+        {
+            "name": "Dmitry Semigradsky",
+            "githubUsername": "Semigradsky",
+            "url": "https://github.com/Semigradsky"
+        }
+    ],
+    "main": "",
+    "types": "index.d.ts",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/DefinitelyTyped/DefinitelyTyped.git",
+        "directory": "types/node"
     },
-    "require": "./build/cjs/index.js"
-  },
-  "dependencies": {
-    "@socket.io/component-emitter": "~3.1.0",
-    "debug": "~4.3.1"
-  },
-  "devDependencies": {
-    "@babel/core": "~7.9.6",
-    "@babel/preset-env": "~7.9.6",
-    "@babel/register": "^7.18.9",
-    "@types/debug": "^4.1.5",
-    "@types/node": "^14.11.1",
-    "@wdio/cli": "^7.26.0",
-    "@wdio/local-runner": "^7.26.0",
-    "@wdio/mocha-framework": "^7.26.0",
-    "@wdio/sauce-service": "^7.26.0",
-    "@wdio/spec-reporter": "^7.26.0",
-    "benchmark": "2.1.2",
-    "expect.js": "0.3.1",
-    "mocha": "^10.1.0",
-    "prettier": "^2.1.2",
-    "rimraf": "^3.0.2",
-    "typescript": "^4.0.3",
-    "wdio-geckodriver-service": "^4.0.0"
-  },
-  "scripts": {
-    "compile": "rimraf ./build && tsc && tsc -p tsconfig.esm.json && ./postcompile.sh",
-    "test": "npm run format:check && npm run compile && if test \"$BROWSERS\" = \"1\" ; then npm run test:browser; else npm run test:node; fi",
-    "test:node": "mocha --reporter dot --bail test/index.js",
-    "test:browser": "wdio",
-    "format:fix": "prettier --write --parser typescript '*.js' 'lib/**/*.ts' 'test/**/*.js'",
-    "format:check": "prettier --check --parser typescript '*.js' 'lib/**/*.ts' 'test/**/*.js'",
-    "prepack": "npm run compile"
-  },
-  "license": "MIT",
-  "engines": {
-    "node": ">=10.0.0"
-  }
+    "scripts": {},
+    "dependencies": {
+        "undici-types": "~5.26.4"
+    },
+    "typesPublisherContentHash": "e16ff5cc6bae8ed88d0ff399d3af0b1017ab1349e316830d51bf3a03a5e1a236",
+    "typeScriptVersion": "4.8"
 }
