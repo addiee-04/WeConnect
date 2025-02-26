@@ -1,78 +1,80 @@
-# `@socket.io/component-emitter`
 
-  Event emitter component.
+# socket.io-parser
 
-This project is a fork of the [`component-emitter`](https://github.com/sindresorhus/component-emitter) project, with [Socket.IO](https://socket.io/)-specific TypeScript typings.
+[![Build Status](https://github.com/socketio/socket.io-parser/workflows/CI/badge.svg)](https://github.com/socketio/socket.io-parser/actions)
+[![NPM version](https://badge.fury.io/js/socket.io-parser.svg)](http://badge.fury.io/js/socket.io-parser)
 
-## Installation
+A socket.io encoder and decoder written in JavaScript complying with version `5`
+of [socket.io-protocol](https://github.com/socketio/socket.io-protocol).
+Used by [socket.io](https://github.com/automattic/socket.io) and
+[socket.io-client](https://github.com/automattic/socket.io-client).
 
-```
-$ npm i @socket.io/component-emitter
-```
+Compatibility table:
 
-## API
+| Parser version | Socket.IO server version | Protocol revision |
+|----------------| ------------------------ | ----------------- |
+| 3.x            | 1.x / 2.x                | 4                 |
+| 4.x            | 3.x                      | 5                 |
 
-### Emitter(obj)
 
-  The `Emitter` may also be used as a mixin. For example
-  a "plain" object may become an emitter, or you may
-  extend an existing prototype.
+## Parser API
 
-  As an `Emitter` instance:
+  socket.io-parser is the reference implementation of socket.io-protocol. Read
+  the full API here:
+  [socket.io-protocol](https://github.com/learnboost/socket.io-protocol).
 
-```js
-import { Emitter } from '@socket.io/component-emitter';
+## Example Usage
 
-var emitter = new Emitter;
-emitter.emit('something');
-```
-
-  As a mixin:
+### Encoding and decoding a packet
 
 ```js
-import { Emitter } from '@socket.io/component-emitter';
+var parser = require('socket.io-parser');
+var encoder = new parser.Encoder();
+var packet = {
+  type: parser.EVENT,
+  data: 'test-packet',
+  id: 13
+};
+encoder.encode(packet, function(encodedPackets) {
+  var decoder = new parser.Decoder();
+  decoder.on('decoded', function(decodedPacket) {
+    // decodedPacket.type == parser.EVENT
+    // decodedPacket.data == 'test-packet'
+    // decodedPacket.id == 13
+  });
 
-var user = { name: 'tobi' };
-Emitter(user);
-
-user.emit('im a user');
+  for (var i = 0; i < encodedPackets.length; i++) {
+    decoder.add(encodedPackets[i]);
+  }
+});
 ```
 
-  As a prototype mixin:
+### Encoding and decoding a packet with binary data
 
 ```js
-import { Emitter } from '@socket.io/component-emitter';
+var parser = require('socket.io-parser');
+var encoder = new parser.Encoder();
+var packet = {
+  type: parser.BINARY_EVENT,
+  data: {i: new Buffer(1234), j: new Blob([new ArrayBuffer(2)])},
+  id: 15
+};
+encoder.encode(packet, function(encodedPackets) {
+  var decoder = new parser.Decoder();
+  decoder.on('decoded', function(decodedPacket) {
+    // decodedPacket.type == parser.BINARY_EVENT
+    // Buffer.isBuffer(decodedPacket.data.i) == true
+    // Buffer.isBuffer(decodedPacket.data.j) == true
+    // decodedPacket.id == 15
+  });
 
-Emitter(User.prototype);
+  for (var i = 0; i < encodedPackets.length; i++) {
+    decoder.add(encodedPackets[i]);
+  }
+});
 ```
+See the test suite for more examples of how socket.io-parser is used.
 
-### Emitter#on(event, fn)
-
-  Register an `event` handler `fn`.
-
-### Emitter#once(event, fn)
-
-  Register a single-shot `event` handler `fn`,
-  removed immediately after it is invoked the
-  first time.
-
-### Emitter#off(event, fn)
-
-  * Pass `event` and `fn` to remove a listener.
-  * Pass `event` to remove all listeners on that event.
-  * Pass nothing to remove all listeners on all events.
-
-### Emitter#emit(event, ...)
-
-  Emit an `event` with variable option args.
-
-### Emitter#listeners(event)
-
-  Return an array of callbacks, or an empty array.
-
-### Emitter#hasListeners(event)
-
-  Check if this emitter has `event` handlers.
 
 ## License
 

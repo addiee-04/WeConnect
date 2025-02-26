@@ -1,6 +1,3 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.hasBinary = exports.isBinary = void 0;
 const withNativeArrayBuffer = typeof ArrayBuffer === "function";
 const isView = (obj) => {
     return typeof ArrayBuffer.isView === "function"
@@ -19,13 +16,12 @@ const withNativeFile = typeof File === "function" ||
  *
  * @private
  */
-function isBinary(obj) {
+export function isBinary(obj) {
     return ((withNativeArrayBuffer && (obj instanceof ArrayBuffer || isView(obj))) ||
         (withNativeBlob && obj instanceof Blob) ||
         (withNativeFile && obj instanceof File));
 }
-exports.isBinary = isBinary;
-function hasBinary(obj, toJSON) {
+export function hasBinary(obj, toJSON) {
     if (!obj || typeof obj !== "object") {
         return false;
     }
@@ -52,4 +48,3 @@ function hasBinary(obj, toJSON) {
     }
     return false;
 }
-exports.hasBinary = hasBinary;

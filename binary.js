@@ -1,7 +1,4 @@
-"use strict";
-Object.defineProperty(exports, "__esModule", { value: true });
-exports.reconstructPacket = exports.deconstructPacket = void 0;
-const is_binary_js_1 = require("./is-binary.js");
+import { isBinary } from "./is-binary.js";
 /**
  * Replaces every Buffer | ArrayBuffer | Blob | File in packet with a numbered placeholder.
  *
@@ -9,7 +6,7 @@ const is_binary_js_1 = require("./is-binary.js");
  * @return {Object} with deconstructed packet and list of buffers
  * @public
  */
-function deconstructPacket(packet) {
+export function deconstructPacket(packet) {
     const buffers = [];
     const packetData = packet.data;
     const pack = packet;
@@ -17,11 +14,10 @@ function deconstructPacket(packet) {
     pack.attachments = buffers.length; // number of binary 'attachments'
     return { packet: pack, buffers: buffers };
 }
-exports.deconstructPacket = deconstructPacket;
 function _deconstructPacket(data, buffers) {
     if (!data)
         return data;
-    if ((0, is_binary_js_1.isBinary)(data)) {
+    if (isBinary(data)) {
         const placeholder = { _placeholder: true, num: buffers.length };
         buffers.push(data);
         return placeholder;
@@ -52,12 +48,11 @@ function _deconstructPacket(data, buffers) {
  * @return {Object} reconstructed packet
  * @public
  */
-function reconstructPacket(packet, buffers) {
+export function reconstructPacket(packet, buffers) {
     packet.data = _reconstructPacket(packet.data, buffers);
     delete packet.attachments; // no longer useful
     return packet;
 }
-exports.reconstructPacket = reconstructPacket;
 function _reconstructPacket(data, buffers) {
     if (!data)
         return data;
