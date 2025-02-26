@@ -1,43 +1,55 @@
 {
-  "name": "vary",
-  "description": "Manipulate the HTTP Vary header",
-  "version": "1.1.2",
-  "author": "Douglas Christopher Wilson <doug@somethingdoug.com>",
+  "name": "undici-types",
+  "version": "5.26.5",
+  "description": "A stand-alone types package for Undici",
+  "homepage": "https://undici.nodejs.org",
+  "bugs": {
+    "url": "https://github.com/nodejs/undici/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nodejs/undici.git"
+  },
   "license": "MIT",
-  "keywords": [
-    "http",
-    "res",
-    "vary"
-  ],
-  "repository": "jshttp/vary",
-  "devDependencies": {
-    "beautify-benchmark": "0.2.4",
-    "benchmark": "2.1.4",
-    "eslint": "3.19.0",
-    "eslint-config-standard": "10.2.1",
-    "eslint-plugin-import": "2.7.0",
-    "eslint-plugin-markdown": "1.0.0-beta.6",
-    "eslint-plugin-node": "5.1.1",
-    "eslint-plugin-promise": "3.5.0",
-    "eslint-plugin-standard": "3.0.1",
-    "istanbul": "0.4.5",
-    "mocha": "2.5.3",
-    "supertest": "1.1.0"
-  },
+  "types": "index.d.ts",
   "files": [
-    "HISTORY.md",
-    "LICENSE",
-    "README.md",
-    "index.js"
+    "*.d.ts"
   ],
-  "engines": {
-    "node": ">= 0.8"
-  },
-  "scripts": {
-    "bench": "node benchmark/index.js",
-    "lint": "eslint --plugin markdown --ext js,md .",
-    "test": "mocha --reporter spec --bail --check-leaks test/",
-    "test-cov": "istanbul cover node_modules/mocha/bin/_mocha -- --reporter dot --check-leaks test/",
-    "test-travis": "istanbul cover node_modules/mocha/bin/_mocha --report lcovonly -- --reporter spec --check-leaks test/"
-  }
+  "contributors": [
+    {
+      "name": "Daniele Belardi",
+      "url": "https://github.com/dnlup",
+      "author": true
+    },
+    {
+      "name": "Ethan Arrowood",
+      "url": "https://github.com/ethan-arrowood",
+      "author": true
+    },
+    {
+      "name": "Matteo Collina",
+      "url": "https://github.com/mcollina",
+      "author": true
+    },
+    {
+      "name": "Matthew Aitken",
+      "url": "https://github.com/KhafraDev",
+      "author": true
+    },
+    {
+      "name": "Robert Nagy",
+      "url": "https://github.com/ronag",
+      "author": true
+    },
+    {
+      "name": "Szymon Marczak",
+      "url": "https://github.com/szmarczak",
+      "author": true
+    },
+    {
+      "name": "Tomas Della Vedova",
+      "url": "https://github.com/delvedor",
+      "author": true
+    }
+  ]
 }
